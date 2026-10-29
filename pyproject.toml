@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "betterway-switch"
+version = "0.1.0"
+description = "A reversible research-first switch for Codex, Claude Code and DeepSeek API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "BetterWay contributors"}]
+dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+betterway = "betterway.cli:main"
+
+[project.gui-scripts]
+betterway-ui = "betterway.gui:main"
+
+[tool.setuptools.package-data]
+betterway = ["*.md"]
+
+[tool.setuptools.packages.find]
+include = ["betterway*"]
