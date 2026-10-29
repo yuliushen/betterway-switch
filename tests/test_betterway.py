@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from importlib.resources import files
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -140,6 +142,18 @@ class ManagerTests(Isolated):
         self.manager.switch(True, ["codex"], migrate_legacy=True)
         self.manager.switch(False)
         self.assertEqual(self.codex.read_bytes(), b"another policy")
+
+    def test_crlf_resource_matches_lf_legacy_file(self):
+        resource = files("betterway")
+        legacy = resource.joinpath("legacy-policy.md").read_bytes().replace(b"\r\n", b"\n")
+        self.put(self.codex, legacy)
+        crlf_resource = SimpleNamespace(read_bytes=lambda: legacy.replace(b"\n", b"\r\n"))
+        wrapper = SimpleNamespace(joinpath=lambda name: crlf_resource if name == "legacy-policy.md" else resource.joinpath(name))
+        with patch("betterway.manager.files", return_value=wrapper):
+            self.manager.switch(True, ["codex"], migrate_legacy=True)
+        self.assertTrue(self.codex.read_bytes().startswith(START))
+        self.manager.switch(False)
+        self.assertFalse(self.codex.exists())
 
     def test_uninstall_keeps_unrelated_rules_and_backups(self):
         self.put(self.claude, b"personal")

@@ -115,7 +115,7 @@ class Manager:
                 if enabled:
                     if migrate_legacy and target == "codex" and not location:
                         legacy = files("betterway").joinpath("legacy-policy.md").read_bytes()
-                        if raw.decode("utf-8-sig").strip().replace("\r\n", "\n") == legacy.decode("utf-8").strip():
+                        if raw.decode("utf-8-sig").replace("\r\n", "\n").strip() == legacy.decode("utf-8-sig").replace("\r\n", "\n").strip():
                             raw = b""
                             info["created"] = True
                     if location:

@@ -48,6 +48,11 @@ jobs:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
           SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
+          current_head=$(gh api "repos/$GH_REPO/commits/HEAD" --jq .sha)
+          if [ "$current_head" != "$SOURCE_SHA" ]; then
+            echo "A newer commit is on the default branch; waiting for its test results."
+            exit 0
+          fi
           if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
             echo "Release $RELEASE_TAG already exists; leaving it unchanged."
           else

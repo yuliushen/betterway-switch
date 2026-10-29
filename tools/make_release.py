@@ -13,7 +13,7 @@ def main():
     destination.mkdir(exist_ok=True)
     release_name = f"BetterWay-{__version__}"
     archive = destination / (release_name + "-source.zip")
-    top_level = ["README.md", "README.en.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md", "VALIDATION.md", "pyproject.toml", ".gitignore", "install.ps1", "run-ui.cmd", "run-ui.pyw"]
+    top_level = ["README.md", "README.en.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md", "VALIDATION.md", "pyproject.toml", ".gitignore", ".gitattributes", "install.ps1", "run-ui.cmd", "run-ui.pyw"]
     selected = [root / name for name in top_level]
     for directory in ("betterway", "tests", "tools", ".github"):
         selected.extend(p for p in (root / directory).rglob("*") if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc")
