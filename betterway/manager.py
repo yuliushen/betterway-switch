@@ -32,10 +32,10 @@ def bounds(data: bytes) -> tuple[int, int] | None:
     if count == (0, 0):
         # Do not append to an unrecognized or partially edited managed block.
         if b"<!-- betterway:" in data:
-            raise BetterWayError("����δ֪���𻵵� BetterWay ��ǣ����ȼ��ָ���ļ���")
+            raise BetterWayError("发现未知或损坏的 BetterWay 标记；请先检查指令文件。")
         return None
     if count != (1, 1) or data.index(END) < data.index(START):
-        raise BetterWayError("BetterWay ��ǲ��������ظ�����ֹͣ�Ա���ԭ�ļ���")
+        raise BetterWayError("BetterWay 标记不完整或重复；已停止以保护原文件。")
     return data.index(START), data.index(END) + len(END)
 
 
@@ -49,7 +49,7 @@ def target_path(target: str) -> Path:
     if target == "claude":
         root = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")).expanduser().absolute()
         return root / "CLAUDE.md"
-    raise BetterWayError(f"��֧�ֵ�ָ��Ŀ�꣺{target}")
+    raise BetterWayError(f"不支持的指令目标：{target}")
 
 
 class Manager:
@@ -70,7 +70,7 @@ class Manager:
         try:
             for path, data in changes:
                 if path.is_symlink():
-                    raise BetterWayError(f"���޸ķ������ӣ�{path}")
+                    raise BetterWayError(f"不修改符号链接：{path}")
                 if data is None:
                     path.unlink(missing_ok=True)
                 else:
@@ -90,8 +90,8 @@ class Manager:
                 else:
                     atomic_write(self.store.path, old_state)
             except Exception as rollback_exc:
-                raise BetterWayError(f"д��ͻع���ʧ�ܣ����ñ��ݻָ���{backup}") from rollback_exc
-            raise BetterWayError(f"д��ʧ�ܣ�ԭ�����ѻع������ݣ�{backup}") from exc
+                raise BetterWayError(f"写入和回滚均失败，请用备份恢复：{backup}") from rollback_exc
+            raise BetterWayError(f"写入失败，原内容已回滚。备份：{backup}") from exc
 
     def switch(self, enabled: bool, targets: list[str] | None = None, migrate_legacy: bool = False) -> dict:
         with self.store.lock():
@@ -106,9 +106,9 @@ class Manager:
                 existing = state["targets"].get(target)
                 path = Path(existing["path"]) if existing else target_path(target)
                 if enabled and existing and target_path(target) != path:
-                    raise BetterWayError(f"{target} ������λ���Ѹı䣻����ԭ�����رպ��ٰ�װ��")
+                    raise BetterWayError(f"{target} 的配置位置已改变；请在原环境关闭后再安装。")
                 if path.is_symlink():
-                    raise BetterWayError(f"���޸ķ������ӣ�{path}")
+                    raise BetterWayError(f"不修改符号链接：{path}")
                 raw = path.read_bytes() if path.exists() else b""
                 info = dict(existing or {"path": str(path), "created": not path.exists(), "separator": "", "prefix_hash": ""})
                 location = bounds(raw)
@@ -150,7 +150,7 @@ class Manager:
 
     def provider(self, value: str) -> None:
         if value not in {"github", "brave", "deepseek"}:
-            raise BetterWayError("������Դ��֧�� github��brave��deepseek��")
+            raise BetterWayError("搜索来源仅支持 github、brave、deepseek。")
         with self.store.lock():
             state = self.store.load()
             state["provider"] = value

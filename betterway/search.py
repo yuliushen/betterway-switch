@@ -24,7 +24,7 @@ class NoRedirect(HTTPRedirectHandler):
 
 def request_json(url: str, headers: dict | None = None, payload: dict | None = None, timeout: int = 20) -> dict:
     if urlparse(url).scheme != "https":
-        raise BetterWayError("����ӿڱ���ʹ�� HTTPS��")
+        raise BetterWayError("网络接口必须使用 HTTPS。")
     body = json.dumps(payload, ensure_ascii=False).encode() if payload is not None else None
     request_headers = {"User-Agent": "BetterWay/0.1", "Accept": "application/json"}
     if body is not None:
@@ -35,25 +35,25 @@ def request_json(url: str, headers: dict | None = None, payload: dict | None = N
         with build_opener(NoRedirect).open(request, timeout=timeout) as response:
             raw = response.read(MAX_RESPONSE + 1)
             if len(raw) > MAX_RESPONSE:
-                raise BetterWayError("�ӿ���Ӧ������С���ơ�")
+                raise BetterWayError("接口响应超出大小限制。")
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("expected object")
         return data
     except HTTPError as exc:
         if urlparse(url).hostname == "api.github.com" and exc.code in {403, 429}:
-            raise BetterWayError(f"GitHub �ܾ�����HTTP {exc.code}��������������Ȩ�޲��㡣������ֹͣ�������� BETTERWAY_GITHUB_TOKEN���Ժ����ԣ����л��������õ���ҳ������Դ��") from exc
-        raise BetterWayError(f"�ӿڷ��� HTTP {exc.code}�������ȡ�Ȩ�޻��Ժ����ԡ�") from exc
+            raise BetterWayError(f"GitHub 拒绝请求（HTTP {exc.code}），可能限流或权限不足。任务已停止；可设置 BETTERWAY_GITHUB_TOKEN，稍后重试，或切换到已配置的网页搜索来源。") from exc
+        raise BetterWayError(f"接口返回 HTTP {exc.code}；请检查额度、权限或稍后重试。") from exc
     except (URLError, TimeoutError, socket.timeout, OSError) as exc:
-        raise BetterWayError("��������ʧ�ܻ�ʱ��δ�ƹ���������ִ�С�") from exc
+        raise BetterWayError("网络连接失败或超时；未绕过搜索继续执行。") from exc
     except (ValueError, UnicodeError) as exc:
-        raise BetterWayError("�ӿ�û�з�����Ч�� JSON ����") from exc
+        raise BetterWayError("接口没有返回有效的 JSON 对象。") from exc
 
 
 def required_key(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
-        raise BetterWayError(f"ȱ�ٻ������� {name}����Կֻ�ӻ���������ȡ��")
+        raise BetterWayError(f"缺少环境变量 {name}；密钥只从环境变量读取。")
     return value
 
 
@@ -74,9 +74,9 @@ def search(query: str, provider: str = "github") -> dict:
     query = " ".join(query.split())
     maximum = {"github": 200, "brave": 400, "deepseek": 128}.get(provider)
     if maximum is None:
-        raise BetterWayError("δ֪��������Դ��")
+        raise BetterWayError("未知的搜索来源。")
     if not query or len(query) > maximum:
-        raise BetterWayError(f"�����ʲ���Ϊ���Ҳ��ܳ��� {maximum} ���ַ�����ʹ�ü�̹ؼ��ʡ�")
+        raise BetterWayError(f"搜索词不能为空且不能超过 {maximum} 个字符；请使用简短关键词。")
     if provider == "github":
         headers = {"Accept": "application/vnd.github+json"}
         token = os.environ.get("BETTERWAY_GITHUB_TOKEN", "").strip()
@@ -85,7 +85,7 @@ def search(query: str, provider: str = "github") -> dict:
         data = request_json("https://api.github.com/search/repositories?" + urlencode({"q": query + " archived:false is:public", "per_page": 5}), headers)
         rows = data.get("items")
         if not isinstance(rows, list) or data.get("incomplete_results") is True:
-            raise BetterWayError("GitHub ���ز��������ʽ�쳣�����������")
+            raise BetterWayError("GitHub 返回不完整或格式异常的搜索结果。")
         entries = []
         for row in rows:
             if not isinstance(row, dict):
@@ -98,17 +98,17 @@ def search(query: str, provider: str = "github") -> dict:
         web = data.get("web")
         rows = web.get("results") if isinstance(web, dict) else None
         if not isinstance(rows, list):
-            raise BetterWayError("Brave δ������Ч����ҳ���������")
+            raise BetterWayError("Brave 未返回有效的网页搜索结果。")
         entries = [clean_result(row.get("title"), row.get("url"), row.get("description")) for row in rows if isinstance(row, dict)]
     else:
         data = request_json("https://api.deepseek.com/v1/tools/search", {"Authorization": "Bearer " + required_key("DEEPSEEK_API_KEY")}, {"query": query, "count": 5, "need_content": False})
         rows = data.get("results")
         if not isinstance(rows, list):
-            raise BetterWayError("DeepSeek δ������Ч�����������")
+            raise BetterWayError("DeepSeek 未返回有效的搜索结果。")
         entries = [clean_result(row.get("title"), row.get("url"), row.get("summary") or row.get("snippet")) for row in rows if isinstance(row, dict)]
     entries = [entry for entry in entries if entry][:5]
     if not entries:
-        raise BetterWayError("����δȡ����Ч��Դ��������ֹͣ�������̹ؼ��ʻ����������Դ��")
+        raise BetterWayError("搜索未取得有效来源，任务已停止。请缩短关键词或更换搜索来源。")
     return {"provider": provider, "query": query, "searched_at": datetime.now(timezone.utc).isoformat(), "results": entries}
 
 

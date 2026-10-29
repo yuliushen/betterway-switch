@@ -1,6 +1,6 @@
 # BetterWay
 
-[����](README.md) �� [Changelog](CHANGELOG.md) �� [Validation](VALIDATION.md)
+[中文](README.md) · [Changelog](CHANGELOG.md) · [Validation](VALIDATION.md)
 
 A reversible research-first switch for Codex, Claude Code, and the DeepSeek API. Help agents look for better tools when their current approach stalls, and provide an explicit search-before-run entry point.
 

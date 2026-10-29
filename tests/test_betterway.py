@@ -44,7 +44,7 @@ class Isolated(unittest.TestCase):
 
 class ManagerTests(Isolated):
     def test_roundtrip_preserves_existing_bytes(self):
-        original = "\ufeff# �û�ԭ�й���\r\n���ָ�ʽ\r\n".encode("utf-8")
+        original = "\ufeff# 用户原有规则\r\n保持格式\r\n".encode("utf-8")
         self.put(self.codex, original)
         self.manager.switch(True)
         self.assertIn(original, self.codex.read_bytes())
@@ -260,7 +260,7 @@ class GateTests(Isolated):
         self.assertEqual(events[0]["event"], "search_failed")
 
     def test_disabled_passes_original_prompt_with_no_search(self):
-        prompt = "�û�ԭ��\n`quoted` & $(literal)"
+        prompt = "用户原文\n`quoted` & $(literal)"
         with patch("betterway.runner.command_for", return_value=["codex"]), patch("betterway.runner.gated_search") as gate, patch("betterway.runner.subprocess.run", return_value=subprocess.CompletedProcess([], 7)) as child:
             code, _ = execute("codex", prompt, store=self.store)
         gate.assert_not_called()

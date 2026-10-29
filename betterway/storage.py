@@ -12,7 +12,7 @@ from . import BetterWayError
 def atomic_write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
-        raise BetterWayError(f"�ܾ��滻�������ӣ����ȼ���ļ���{path}")
+        raise BetterWayError(f"拒绝替换符号链接，请先检查文件：{path}")
     mode = path.stat().st_mode if path.exists() else 0o600
     fd, name = tempfile.mkstemp(prefix=".betterway-", dir=path.parent)
     try:
@@ -52,7 +52,7 @@ class Store:
                 raise ValueError("invalid state")
             return state
         except (ValueError, KeyError, TypeError, AttributeError) as exc:
-            raise BetterWayError(f"�����𻵣���ֹͣ������δĬ��Ϊ�رա����� {self.path}") from exc
+            raise BetterWayError(f"配置损坏；已停止操作，未默认为关闭。请检查 {self.path}") from exc
 
     def save(self, state: dict) -> None:
         atomic_write(self.path, (json.dumps(state, ensure_ascii=False, indent=2) + "\n").encode())
@@ -64,7 +64,7 @@ class Store:
         try:
             fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         except FileExistsError as exc:
-            raise BetterWayError(f"��һ�����ò�����δ�����������쳣�˳��������ɾ�� {path}") from exc
+            raise BetterWayError(f"另一个配置操作尚未结束。若曾异常退出，请检查后删除 {path}") from exc
         try:
             os.close(fd)
             yield
